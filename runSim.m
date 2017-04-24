@@ -21,7 +21,7 @@ for indx = 1:numCluster
     networkCluster(indx) = cluster (nNodes,clusterCenters(indx,:), radius);
 end
 
-nEpochs = 300;
+nEpochs = 100;
 
 AP = accessPoint ();
 
@@ -29,7 +29,7 @@ AP.set('location',xyAP, 'numClusters', numCluster);
 
 AP.Initialize ();
 
-options = {'static','fixed'};
+options = {'no','fixed','variable'};
 
 for opt = 1:length(options)
     
@@ -58,7 +58,6 @@ for opt = 1:length(options)
         % BS returns the "leader coordinates"
         % Populate the leader co-ordinates in xyLeaders
         % this can also be a map of sorts.
-        %xyLeaders = [c1.nodesPos(1,:); c2.nodesPos(1,:); c3.nodesPos(1,:)]; % TBD TBD
 
         for indx = 1:numCluster        
             networkCluster(indx).computeLoss2Coordinator(xyLeaders(indx,:));
@@ -74,7 +73,7 @@ for opt = 1:length(options)
         arrEn = networkCluster(indx).nodeEnergyUsage;
         energy(indx,1) = mean(arrEn);
         energy(indx,2) = max(arrEn);
-        energy(indx,3) = mean((arrEn-  energy(indx,1)).^2);
+        energy(indx,3) = sqrt(mean((arrEn-  energy(indx,1)).^2));
         
         networkCluster(indx).flush();
     end
@@ -82,10 +81,12 @@ for opt = 1:length(options)
     energy = 10*log10(energy);
 
     figure(opt);
+    str = sprintf('%s share update',cell2mat(options(opt)));
     bar(1:numCluster, energy);
     set(gca,'Fontsize',16);
     xlabel('Cluster'); ylabel('Power consumed (dB)');
-    legend('Mean','Maximum');
+    legend('Mean','Maximum','Std. Div','Location','SE');
+    title(str);
     grid on;
     %ylim([-5 35]);
     

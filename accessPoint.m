@@ -72,41 +72,24 @@ classdef accessPoint < hgsetget
             end
             
             
+            obj.expertWt = obj.expertWt.* exp(-obj.eta*Losses);
             
             switch(obj.expertShare)
-                case 'static'
-                    obj.expertWt = obj.expertWt.* exp(-obj.eta*Losses);
+                case 'no'
+                    % no changes required
                 case 'fixed'
                     pool = sum(obj.alpha*obj.expertWt);
                     obj.expertWt = (1-obj.alpha)*obj.expertWt + ...
                         1/(obj.numClusters-1)*(pool - obj.alpha*obj.expertWt);
                 case 'variable'
-                    fprintf('To be implemented if time permits');
+                    pool = sum((1 - (1-obj.alpha).^Losses).*obj.expertWt);
+                    obj.expertWt = ((1-obj.alpha).^Losses).* obj.expertWt + ...
+                        1/(obj.numClusters-1)*(pool - (1 - (1-obj.alpha).^Losses).*obj.expertWt);
+                    
                 otherwise
                     error('Invalid update method');
             end
-            
-            
-%             nNodes = 10;
-%             conf = zeros(1,nNodes); % Uses expert prediction to select coordinators
-%             % for each expert
-%             % for each cluster
-%             
-%             for ind = 1:obj.numClusters
-%                 
-%                 key = char([99 48+ind]);
-%                 top = obj.topology(key);
-%                 
-%                 nNodes = size(top,1);                
-%                 % for each node if chosen as leader
-%                 for leadInd = 1:nNodes
-%                     dis = sum(((ones(nNodes,1)*top(leadInd,:)-top).^2),2);  %Euclidean Distance.
-%                     qMeasure = mean(dis);   % a measure of average distance to leader
-%                     conf(:,leadInd,ind) = qMeasure; %(prob)./sum(prob);   % probabilities
-%                 end
-%                 
-%             end
-%             xyLeaders = conf;
+
         end
     end
     
