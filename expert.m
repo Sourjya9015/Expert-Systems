@@ -21,7 +21,8 @@ switch (selOpt)
             
             dist = sum((repmat(APCoord,len,1) - nodePos).^2,2);
             
-            pred(key) = (dist./sum(dist))';
+            prob = 1./dist;
+            pred(key) = (prob./sum(prob))';
         end
         
     case 'closestClus'
@@ -36,7 +37,7 @@ switch (selOpt)
                 nodeCoord = nodePos(cnt,:);
                 
                 dist = sqrt(sum((repmat(nodeCoord,nnode,1) - nodePos).^2,2));
-                pmf(cnt) = mean(dist);
+                pmf(cnt) = 1/mean(dist);
             end
             
             pred(key) = pmf./sum(pmf);

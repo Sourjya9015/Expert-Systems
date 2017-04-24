@@ -26,6 +26,7 @@ classdef accessPoint < hgsetget
         function Initialize (obj)
             % NclusX1 vector with weights on each experts
             obj.expertWt = (1/obj.numExperts)*ones(obj.numExperts,1);
+            %obj.expertWt = [1; zeros(obj.numExperts,1)];
         end
         
         function xyLeaders = selectCoordinators(obj)

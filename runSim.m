@@ -3,7 +3,7 @@
 clc; clear; close all;
 
 numCluster = 8; % number clusters of machine nodes
-APPos = [0 0];
+xyAP = [0 0]; % coordinates of the access point
 
 %clusterCenters = [50 50; 0 -50; -50 50];
 radii = 100;
@@ -11,9 +11,9 @@ ang = (2*pi)*rand(numCluster,1);
 p = radii*exp(-1i*ang);
 clusterCenters = [real(p) imag(p)];
 
-xyAP = [0 0]; % coordinates of the access point
 
-nNodes = 10;
+
+nNodes = 100;
 radius = 20; % meters
 
 
