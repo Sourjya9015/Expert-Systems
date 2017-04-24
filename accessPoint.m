@@ -59,7 +59,7 @@ classdef accessPoint < hgsetget
                 
                 % Prediction
                 pmf = sum(repmat(obj.expertWt,1,nnodes).*([e1x; e2x; e3x]));
-                pmf = pmf.*cqi'; % weigh the prediction with the channel quality
+                pmf = pmf.*(10.^(-cqi/10))'; % weigh the prediction with the channel quality
                 pmf = pmf./sum(pmf);
                 [~,index] = max(pmf);
 
