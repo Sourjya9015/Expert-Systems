@@ -12,15 +12,101 @@ classdef accessPoint < hgsetget
         cqiFeedback; % channel quality feedback; again a Map set from the main simulation
         
         % Expert setting
-        numExperts; % Number of experts
+        numExperts = 3; % Number of experts. Let's keep this fixed for now.
         expertWt;   % Weights on each expert
+        expertShare; % 'static','fixed', or 'variable'
+        
+        eta = 0.1; % can set eta using set
+        alpha = 0.4; % set a value for alpha
         
     end
     
     methods
         
-        function xyLeaders = selectCoordinators ()
-            % Uses expert prediction to select coordinators
+        function Initialize (obj)
+            % NclusX1 vector with weights on each experts
+            obj.expertWt = (1/obj.numExperts)*ones(obj.numExperts,1);
+        end
+        
+        function xyLeaders = selectCoordinators(obj)
+            % I do not think we should do it like this. Where is the
+            % part on expert advice?? This is just centroid calculation.
+            
+            % Get expert predictions. These are all maps with key c1, c2
+            % etc.
+            
+            xyLeaders = zeros(obj.numClusters, 2);
+            
+            e1 = expert( obj.location, obj.topology, obj.numClusters, 'closestAP' );
+            e2 = expert( obj.location, obj.topology, obj.numClusters, 'closestClus' );
+            e3 = expert( obj.location, obj.topology, obj.numClusters, 'uniform' );
+            
+            Losses = zeros(obj.numExperts,1);
+            
+            for ind = 1:obj.numClusters
+                
+                key = char([99 48+ind]);
+                pos = obj.topology(key);
+                
+                nnodes = size(pos,1);
+                
+                e1x = e1(key);
+                e2x = e2(key);
+                e3x = e3(key);
+                
+                cqi = obj.cqiFeedback(key);
+                
+                % Prediction
+                pmf = sum(repmat(obj.expertWt,1,nnodes).*([e1x; e2x; e3x]));
+                pmf = pmf.*cqi'; % weigh the prediction with the channel quality
+                pmf = pmf./sum(pmf);
+                [~,index] = max(pmf);
+
+                xyLeaders(ind,:) = pos(index,:);
+                
+                % Compute losses
+                Losses(1) = Losses(1) + (1/obj.numClusters)*loss( e1x, xyLeaders(ind,:), pos );
+                Losses(2) = Losses(2) + (1/obj.numClusters)*loss( e2x, xyLeaders(ind,:), pos );
+                Losses(3) = Losses(3) + (1/obj.numClusters)*loss( e3x, xyLeaders(ind,:), pos );
+                              
+            end
+            
+            
+            
+            switch(obj.expertShare)
+                case 'static'
+                    obj.expertWt = obj.expertWt.* exp(-obj.eta*Losses);
+                case 'fixed'
+                    pool = sum(obj.alpha*obj.expertWt);
+                    obj.expertWt = (1-obj.alpha)*obj.expertWt + ...
+                        1/(obj.numClusters-1)*(pool - obj.alpha*obj.expertWt);
+                case 'variable'
+                    fprintf('To be implemented if time permits');
+                otherwise
+                    error('Invalid update method');
+            end
+            
+            
+%             nNodes = 10;
+%             conf = zeros(1,nNodes); % Uses expert prediction to select coordinators
+%             % for each expert
+%             % for each cluster
+%             
+%             for ind = 1:obj.numClusters
+%                 
+%                 key = char([99 48+ind]);
+%                 top = obj.topology(key);
+%                 
+%                 nNodes = size(top,1);                
+%                 % for each node if chosen as leader
+%                 for leadInd = 1:nNodes
+%                     dis = sum(((ones(nNodes,1)*top(leadInd,:)-top).^2),2);  %Euclidean Distance.
+%                     qMeasure = mean(dis);   % a measure of average distance to leader
+%                     conf(:,leadInd,ind) = qMeasure; %(prob)./sum(prob);   % probabilities
+%                 end
+%                 
+%             end
+%             xyLeaders = conf;
         end
     end
     

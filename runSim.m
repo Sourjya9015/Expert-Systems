@@ -2,57 +2,92 @@
 
 clc; clear; close all;
 
-numCluster = 3; % three clusters of machine nodes
+numCluster = 8; % number clusters of machine nodes
 APPos = [0 0];
 
-clusterCenters = [50 50; 0 -50; -50 50];
+%clusterCenters = [50 50; 0 -50; -50 50];
+radii = 100;
+ang = (2*pi)*rand(numCluster,1);
+p = radii*exp(-1i*ang);
+clusterCenters = [real(p) imag(p)];
 
 xyAP = [0 0]; % coordinates of the access point
 
 nNodes = 10;
 radius = 20; % meters
 
-c1 = cluster (nNodes,clusterCenters(1,:), radius);
-c2 = cluster (nNodes,clusterCenters(2,:), radius);
-c3 = cluster (nNodes,clusterCenters(3,:), radius);
 
-nEpochs = 100;
+for indx = 1:numCluster
+    networkCluster(indx) = cluster (nNodes,clusterCenters(indx,:), radius);
+end
+
+nEpochs = 300;
 
 AP = accessPoint ();
 
 AP.set('location',xyAP, 'numClusters', numCluster);
 
-for i=1:nEpochs
+AP.Initialize ();
+
+options = {'static','fixed'};
+
+for opt = 1:length(options)
     
-    c1.computeChannelLoss(xyAP);
-    c2.computeChannelLoss(xyAP);
-    c3.computeChannelLoss(xyAP);
+    AP.set('expertShare',cell2mat(options(opt)));
+    for i=1:nEpochs
+
+        cqiReport = containers.Map ();
+        topology = containers.Map ();
+
+        % Report the path loss to the AP/BS
+        for indx = 1:numCluster
+            key = char([99 48+indx]);
+            networkCluster(indx).computeChannelLoss(xyAP);
+            cqiReport(key) = networkCluster(indx).channelLoss2AP;
+            topology(key) = networkCluster(indx).nodesPos;
+        end
+
+
+        AP.set('topology',topology, 'cqiFeedback', cqiReport);
+
+        % BS has all different experts residing. Job of each expert is to find
+        % leader coordinates with confidences using any alogirhtm
+        xyLeaders = AP.selectCoordinators();  % Has 'average' distance measures for all choices of leaders for each cluster
+        %[dis,leaderIndx]=min(Leaders);
+
+        % BS returns the "leader coordinates"
+        % Populate the leader co-ordinates in xyLeaders
+        % this can also be a map of sorts.
+        %xyLeaders = [c1.nodesPos(1,:); c2.nodesPos(1,:); c3.nodesPos(1,:)]; % TBD TBD
+
+        for indx = 1:numCluster        
+            networkCluster(indx).computeLoss2Coordinator(xyLeaders(indx,:));
+            networkCluster(indx).transmit();
+        end
+
+    end
+
+    %% Gathering the energy used data
+    energy = zeros(numCluster,3);
+
+    for indx = 1:numCluster   
+        arrEn = networkCluster(indx).nodeEnergyUsage;
+        energy(indx,1) = mean(arrEn);
+        energy(indx,2) = max(arrEn);
+        energy(indx,3) = mean((arrEn-  energy(indx,1)).^2);
+        
+        networkCluster(indx).flush();
+    end
+
+    energy = 10*log10(energy);
+
+    figure(opt);
+    bar(1:numCluster, energy);
+    set(gca,'Fontsize',16);
+    xlabel('Cluster'); ylabel('Power consumed (dB)');
+    legend('Mean','Maximum');
+    grid on;
+    %ylim([-5 35]);
     
-    % Just report the path loss to the AP/BS
-    cqiReport = containers.Map ();
-    cqiReport('c1') = c1.channelLoss2AP;
-    cqiReport('c2') = c2.channelLoss2AP;
-    cqiReport('c3') = c3.channelLoss2AP;
-    
-    topology = containers.Map ();
-    topology('c1') = c1.nodesPos;
-    topology('c2') = c2.nodesPos;
-    topology('c3') = c3.nodesPos;
-    
-    AP.set('topology',topology, 'cqiFeedback', cqiReport);
-    
-    % TBD: Send this to the BS.
-    
-    % BS returns the "leader coordinates"
-    % Populate the leader co-ordinates in xyLeaders
-    % this can also be a map of sorts.
-    xyLeaders = [c1.nodesPos(1,:); c2.nodesPos(1,:); c3.nodesPos(1,:)]; % TBD TBD
-    
-    c1.computeLoss2Coordinator(xyLeaders(1,:));
-    c2.computeLoss2Coordinator(xyLeaders(2,:));
-    c3.computeLoss2Coordinator(xyLeaders(3,:));
-    
-    c1.transmit ();
-    c2.transmit ();
-    c3.transmit ();
 end
+

@@ -20,6 +20,8 @@ classdef cluster < hgsetget
         N0 = -174; % Noise psd in dB
         Ptx = 10; % Tx power in dBm
         nBitsTx = 800; % each node sends 100 bytes of data : fixed for now.
+        gainRx = 12; % 12 dB of Rx gain at the AP
+        gainTx = 4; % 4 dB of Tx gain at the nodes
         
     end
     
@@ -82,8 +84,10 @@ classdef cluster < hgsetget
         % secondary nodes TX to coordinator. Coordinator Tx to AP/BS
         function transmit (obj)
             bwPerNode = obj.bw/(obj.numNodes - 1);
-            SNR = obj.Ptx - obj.Nf - obj.N0 - 10*log10(obj.bw) - obj.channelLoss2Coord;
-            SNR2AP = obj.Ptx - obj.Nf - obj.N0 - 10*log10(obj.bw) - obj.channelLoss2AP;
+            SNR = obj.Ptx + obj.gainTx + obj.gainRx ...
+                - obj.Nf - obj.N0 - 10*log10(obj.bw) - obj.channelLoss2Coord;
+            SNR2AP = obj.Ptx + obj.gainTx + obj.gainRx ...
+                - obj.Nf - obj.N0 - 10*log10(obj.bw) - obj.channelLoss2AP;
 
             % Obtaine rate from SNR using Shannon's law
             rate = (obj.channelLoss2Coord ~=0).*(bwPerNode.*log2(1+10.^(0.1*SNR))) + ...
@@ -97,6 +101,10 @@ classdef cluster < hgsetget
             txTime = numBits ./ rate;
             
             obj.nodeEnergyUsage = obj.nodeEnergyUsage + 10.^(0.1*obj.Ptx).*txTime*1e-3;
+        end
+        
+        function flush (obj)
+            obj.nodeEnergyUsage = zeros(obj.numNodes,1);
         end
     end
     
