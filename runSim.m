@@ -27,11 +27,17 @@ AP = accessPoint ();
 
 AP.set('location',xyAP, 'numClusters', numCluster);
 
-AP.Initialize ();
 
 options = {'no','fixed','variable'};
+%options = {'no'};
 
 for opt = 1:length(options)
+    
+    weightsExprts = zeros(AP.numExperts, nEpochs+1);
+    
+    AP.Initialize ();
+    
+    weightsExprts(:,1) = AP.expertWt;
     
     AP.set('expertShare',cell2mat(options(opt)));
     for i=1:nEpochs
@@ -58,6 +64,8 @@ for opt = 1:length(options)
         % BS returns the "leader coordinates"
         % Populate the leader co-ordinates in xyLeaders
         % this can also be a map of sorts.
+        
+        weightsExprts(:,i+1) = AP.expertWt;
 
         for indx = 1:numCluster        
             networkCluster(indx).computeLoss2Coordinator(xyLeaders(indx,:));
@@ -67,28 +75,41 @@ for opt = 1:length(options)
     end
 
     %% Gathering the energy used data
-    energy = zeros(numCluster,3);
-
+    energy = zeros(numCluster,2);
+    stdDiv = zeros(numCluster,1);
     for indx = 1:numCluster   
         arrEn = networkCluster(indx).nodeEnergyUsage;
         energy(indx,1) = mean(arrEn);
         energy(indx,2) = max(arrEn);
-        energy(indx,3) = sqrt(mean((arrEn-  energy(indx,1)).^2));
+        stdDiv(indx) = sqrt(mean((arrEn-  energy(indx,1)).^2));
         
         networkCluster(indx).flush();
     end
 
-    energy = 10*log10(energy);
+    energy = 10*log10(energy) + 30 ;
+    stdDiv = 10*log10(stdDiv) + 30 ;
 
     figure(opt);
     str = sprintf('%s share update',cell2mat(options(opt)));
-    bar(1:numCluster, energy);
-    set(gca,'Fontsize',16);
-    xlabel('Cluster'); ylabel('Power consumed (dB)');
-    legend('Mean','Maximum','Std. Div','Location','SE');
+    subplot(2,1,1);bar(1:numCluster, energy);
+    set(gca,'Fontsize',12);
+    xlabel('Cluster'); ylabel('Power consumed (dBm)');
+    legend('Mean','Maximum','Location','SE');
     title(str);
+    subplot(2,1,2);errorbar(1:numCluster, energy(:,1),stdDiv);
+    set(gca,'Fontsize',12);
+    xlabel('Cluster'); ylabel('Power consumed (dBm)');
+    title('Mean energy with standard div.');
     grid on;
     %ylim([-5 35]);
     
+    figure(4+opt);
+    plot(0:nEpochs, weightsExprts(1,:),'-', 0:nEpochs, weightsExprts(2,:),'-', ...
+        0:nEpochs, weightsExprts(3,:),'-', 'Linewidth',2);
+    set(gca,'Fontsize',16);
+    xlabel('Num of epochs'); ylabel('Weights');
+    legend('Expert 1','Expert 2', 'Expert 3');
+    title(str);
+    grid on;
 end
 

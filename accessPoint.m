@@ -16,8 +16,8 @@ classdef accessPoint < hgsetget
         expertWt;   % Weights on each expert
         expertShare; % 'static','fixed', or 'variable'
         
-        eta = 0.1; % can set eta using set
-        alpha = 0.4; % set a value for alpha
+        eta = 0.01; % can set eta using set
+        alpha = 0.2; % set a value for alpha
         
     end
     
@@ -26,7 +26,7 @@ classdef accessPoint < hgsetget
         function Initialize (obj)
             % NclusX1 vector with weights on each experts
             obj.expertWt = (1/obj.numExperts)*ones(obj.numExperts,1);
-            %obj.expertWt = [1; zeros(obj.numExperts,1)];
+            %obj.expertWt = [1; zeros(obj.numExperts-1,1)];
         end
         
         function xyLeaders = selectCoordinators(obj)
@@ -90,6 +90,8 @@ classdef accessPoint < hgsetget
                 otherwise
                     error('Invalid update method');
             end
+            
+            obj.expertWt = obj.expertWt./sum(obj.expertWt);
 
         end
     end
