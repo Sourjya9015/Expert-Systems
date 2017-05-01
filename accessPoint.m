@@ -16,9 +16,10 @@ classdef accessPoint < hgsetget
         expertWt;   % Weights on each expert
         expertShare; % 'static','fixed', or 'variable'
         
-        eta = 0.01; % can set eta using set
-        alpha = 0.2; % set a value for alpha
-        
+        eta = 0.1; % can set eta using set
+        alpha = 0.1; % set a value for alpha, may be using set
+        expertType = 'sane'
+      
     end
     
     methods
@@ -29,7 +30,7 @@ classdef accessPoint < hgsetget
             %obj.expertWt = [1; zeros(obj.numExperts-1,1)];
         end
         
-        function xyLeaders = selectCoordinators(obj)
+        function [xyLeaders, outLoss] = selectCoordinators(obj)
             % I do not think we should do it like this. Where is the
             % part on expert advice?? This is just centroid calculation.
             
@@ -38,9 +39,9 @@ classdef accessPoint < hgsetget
             
             xyLeaders = zeros(obj.numClusters, 2);
             
-            e1 = expert( obj.location, obj.topology, obj.numClusters, 'closestAP' );
-            e2 = expert( obj.location, obj.topology, obj.numClusters, 'closestClus' );
-            e3 = expert( obj.location, obj.topology, obj.numClusters, 'uniform' );
+            e1 = expert( obj.location, obj.topology, obj.numClusters, 'closestAP', obj.expertType );
+            e2 = expert( obj.location, obj.topology, obj.numClusters, 'closestClus', obj.expertType );
+            e3 = expert( obj.location, obj.topology, obj.numClusters, 'uniform', obj.expertType);
             
             Losses = zeros(obj.numExperts,1);
             
@@ -55,11 +56,13 @@ classdef accessPoint < hgsetget
                 e2x = e2(key);
                 e3x = e3(key);
                 
-                cqi = obj.cqiFeedback(key);
+                cqi = obj.cqiFeedback(key); % in dB
+                cqiWt = 10.^(-cqi/10);
+                %cqiWt = cqi./sum(cqiWt);
                 
                 % Prediction
                 pmf = sum(repmat(obj.expertWt,1,nnodes).*([e1x; e2x; e3x]));
-                pmf = pmf.*(10.^(-cqi/10))'; % weigh the prediction with the channel quality
+                pmf = pmf.*(cqiWt)'; % weigh the prediction with the channel quality
                 pmf = pmf./sum(pmf);
                 [~,index] = max(pmf);
 
@@ -69,10 +72,10 @@ classdef accessPoint < hgsetget
                 Losses(1) = Losses(1) + (1/obj.numClusters)*loss( e1x, xyLeaders(ind,:), pos );
                 Losses(2) = Losses(2) + (1/obj.numClusters)*loss( e2x, xyLeaders(ind,:), pos );
                 Losses(3) = Losses(3) + (1/obj.numClusters)*loss( e3x, xyLeaders(ind,:), pos );
-                              
+                
             end
             
-            
+            outLoss = Losses;
             obj.expertWt = obj.expertWt.* exp(-obj.eta*Losses);
             
             switch(obj.expertShare)
@@ -85,8 +88,7 @@ classdef accessPoint < hgsetget
                 case 'variable'
                     pool = sum((1 - (1-obj.alpha).^Losses).*obj.expertWt);
                     obj.expertWt = ((1-obj.alpha).^Losses).* obj.expertWt + ...
-                        1/(obj.numClusters-1)*(pool - (1 - (1-obj.alpha).^Losses).*obj.expertWt);
-                    
+                        1/(obj.numClusters-1)*(pool - (1 - (1-obj.alpha).^Losses).*obj.expertWt);    
                 otherwise
                     error('Invalid update method');
             end

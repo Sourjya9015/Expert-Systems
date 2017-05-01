@@ -7,7 +7,7 @@ function [ L ] = loss( pmf, leaderPos, nodePos )
 
 len = size(nodePos,1);
 
-dist = sum((repmat(leaderPos,len,1) - nodePos).^2,2);
+dist = sqrt(sum((repmat(leaderPos,len,1) - nodePos).^2,2));
 
 L = sum(pmf.* dist');
 

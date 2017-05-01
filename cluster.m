@@ -13,9 +13,9 @@ classdef cluster < hgsetget
         clusterCenter; % cluster center; default at origin
         clusterRadius; % cluster radius; default 10
         
-        fc = 2.4*1e9; % operating frequency 2 GHz
+        fc = 2.4e9; % operating frequency 2.4 GHz
         
-        bw = 10*1e6; % 10 MHz of total BW
+        bw = 22*1e6; % 22 MHz of total BW
         Nf = 4; % noise factor in dB
         N0 = -174; % Noise psd in dB
         Ptx = 10; % Tx power in dBm
@@ -54,7 +54,7 @@ classdef cluster < hgsetget
             
             dist = sqrt(sum((obj.nodesPos - repmat(apCoord, obj.numNodes,1)).^2,2));            
             
-            lam = (3*1e8)/obj.fc;
+            lam = (3e8)/obj.fc;
             PL = 20.*log10(((4*pi*dist)./lam));
             
             obj.channelLoss2AP = PL + chLoss';
@@ -63,7 +63,7 @@ classdef cluster < hgsetget
         function computeLoss2Coordinator (obj, LeaderCoord)
             pmf = [0.4059 0.594 0.0001]; % very less blocking probabilty
             
-            loss = [0 10 100]; % loss in dB due to channel state
+            loss = [0 20 100]; % loss in dB due to channel state
             
             pdist = [0, cumsum(pmf)];
             u = rand(obj.numNodes,1);
@@ -72,7 +72,7 @@ classdef cluster < hgsetget
             
             dist = sqrt(sum((obj.nodesPos - repmat(LeaderCoord, obj.numNodes,1)).^2,2));
             
-            lam = (3*1e8)/obj.fc;
+            lam = (3e8)/obj.fc;
             PL = 20.*log10(((4*pi*dist)./lam));
             
             PL(dist == 0) = 0;
@@ -83,7 +83,7 @@ classdef cluster < hgsetget
         
         % secondary nodes TX to coordinator. Coordinator Tx to AP/BS
         function transmit (obj)
-            bwPerNode = obj.bw/(obj.numNodes - 1);
+            bwPerNode = obj.bw./(obj.numNodes - 1);
             SNR = obj.Ptx + obj.gainTx + obj.gainRx ...
                 - obj.Nf - obj.N0 - 10*log10(obj.bw) - obj.channelLoss2Coord;
             SNR2AP = obj.Ptx + obj.gainTx + obj.gainRx ...
@@ -94,8 +94,7 @@ classdef cluster < hgsetget
                 (obj.channelLoss2Coord == 0).*(obj.bw*log2(1+ 10.^(0.1*SNR2AP)));
             
             numBits = (obj.channelLoss2Coord ~=0).*(obj.nBitsTx*ones(obj.numNodes,1)) + ...
-                (obj.channelLoss2Coord == 0).*(obj.numNodes*obj.nBitsTx*ones(obj.numNodes,1));
-                    
+                (obj.channelLoss2Coord == 0).*(obj.numNodes*obj.nBitsTx*ones(obj.numNodes,1));      
             
             % TX time is num of bits/ rate
             txTime = numBits ./ rate;

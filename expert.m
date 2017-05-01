@@ -1,4 +1,4 @@
-function [ pred ] = expert( APCoord, topology, numC, selOpt )
+function [ pred ] = expert( APCoord, topology, numC, selOpt,opt)
 %EXPERT1:Expert prediction for the first expert
 % Input:
 %        APCoord: Co-ordinate of the access  point
@@ -10,26 +10,34 @@ function [ pred ] = expert( APCoord, topology, numC, selOpt )
 
 pred = containers.Map ();
 
+
 switch (selOpt)
     case 'closestAP' 
         % Output distribution based on closeness to AP
         for indx=1:numC
             key = char([99 48+indx]);
             nodePos = topology(key);
+            nodePos = nodePos + randn(size(nodePos));
             
             len = size( nodePos , 1); 
             
             dist = sum((repmat(APCoord,len,1) - nodePos).^2,2);
             
             prob = 1./dist;
-            pred(key) = (prob./sum(prob))';
+            
+            if ( strcmp(opt, 'mad') == 1)
+                pmf = rand(1,len);
+                pred(key) = pmf./sum(pmf);
+            else
+                pred(key) = (prob./sum(prob))';
+            end
         end
         
     case 'closestClus'
         % Output distribution based on closeness to every other node
         for indx=1:numC
             key = char([99 48+indx]);
-            nodePos = topology(key);
+            nodePos = topology(key); nodePos = nodePos + randn(size(nodePos));
             nnode = size( nodePos , 1); 
             pmf = zeros(1,nnode);
             
@@ -40,7 +48,12 @@ switch (selOpt)
                 pmf(cnt) = 1/mean(dist);
             end
             
-            pred(key) = pmf./sum(pmf);
+            if ( strcmp(opt, 'mad') == 1)
+                pmf = abs(randn(1,nnode));
+                pred(key) = pmf./sum(pmf);
+            else    
+                pred(key) = pmf./sum(pmf);
+            end
             
         end
         
@@ -49,7 +62,7 @@ switch (selOpt)
         % likely
         for indx=1:numC
             key = char([99 48+indx]);
-            nodePos = topology(key);
+            nodePos = topology(key); nodePos = nodePos + randn(size(nodePos));
             len = size( nodePos , 1); 
           
             pred(key) = (1/len)*ones(1,len);
