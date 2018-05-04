@@ -1,1 +1,2 @@
-# Expert-Systems
+# Online Learning with Experts Advice in Distributed Wireless Networks
+This works studies expert advice framework in a distributed wireless network with nodes working in clusters. Specifically, we investigate how the choice of a cluster coordinator is influenced by the use of experts advice. We compare the performance of the static, fixed share and variable share experts algorithms in choosing cluster coordinator nodes. We compare the total energy spent by the nodes in each of the clusters and also study the variance in energy consumption within clusters. It is found that from the perspective of energy consumption, the static expert algorithm does better than fixed and variable share algorithms.
